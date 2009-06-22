@@ -1,0 +1,8 @@
+Description:
+
+	PDF Meta Title will replace the title meta tag with the file name 
+	(minus the extension) of the pdf file.
+	
+Usage:
+
+	pdf-meta-title <folder>
