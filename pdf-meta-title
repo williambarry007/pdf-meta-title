@@ -1,0 +1,24 @@
+#!/usr/bin/php
+<?php
+
+$folder = $argv[1];
+$handle = opendir($folder);
+
+if (!$handle)
+{
+	echo "Can't open folder.\n";
+	exit;
+}
+
+while (false !== ($file = readdir($handle)))
+{
+	$name = explode('.', $file);
+	$ext = array_pop($name);
+	if ($ext != 'pdf')
+		continue;
+
+	echo "Updating $file...\n";
+	shell_exec("pdf-meta-title-single ". str_replace(' ', '\ ', $file));
+}
+
+closedir($handle);

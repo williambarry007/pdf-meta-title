@@ -1,0 +1,80 @@
+#!/usr/bin/php
+<?php
+
+// Location of pdftk binary
+$pdftk = "/usr/local/bin/pdftk";
+
+// Get the pdf name
+$pdf = $argv[1];
+$baseDir = dirname($pdf);
+if ($baseDir == '');
+	$baseDir = '.';
+$pdf = basename($pdf);
+
+$name = explode('.', $pdf);
+array_pop($name);
+$name = implode('.', $name);
+
+// Dump the metadata into a file
+shell_exec("$pdftk \"$baseDir/$pdf\" dump_data output \"$baseDir/$name.info\"");
+
+// Change the metadata and write it back to the file
+$str = file_get_contents("$baseDir/$name.info");
+list($info, $info2) = parseInfo($str);
+$info['Title'] = $name;
+$str = implodeInfo($info, $info2);
+file_put_contents("$name.info", $str); 
+
+// Write the metadata back to the pdf
+shell_exec("$pdftk \"$baseDir/$pdf\" update_info \"$baseDir/$name.info\" output \"$baseDir/$name.tmp\"");
+shell_exec("mv -f \"$baseDir/$name.tmp\" \"$baseDir/$name.pdf\"");
+
+// Clean up
+shell_exec("rm \"$baseDir/$name.info\"");
+
+/******************************************************************************/
+
+function parseInfo($str)
+{
+	$lines = explode("\n", $str);
+	$info = array();
+	$info2 = array();
+	$count = count($lines);
+	
+	for ($i=0; $i<$count; $i++)
+	{
+		$line = $lines[$i];
+		if (substr($line, 0, 9) == 'InfoKey: ')
+		{
+			$key = preg_replace('|^InfoKey: (.*?)$|', '$1', $line);
+			$i++;
+			$line = $lines[$i];
+			$value = preg_replace('|^InfoValue: (.*?)$|', '$1', $line);
+			$info[$key] = $value;
+		}
+		else
+		{
+			$key = preg_replace('|^(.*?): .*?$|', '$1', $line);
+			$value = preg_replace('|^.*?: (.*?)$|', '$1', $line);
+			$info2[$key] = $value;
+		}	
+	}
+	return array($info, $info2);	
+}
+
+/******************************************************************************/
+
+function implodeInfo($info, $info2)
+{
+	$str = '';
+	
+	foreach ($info as $key => $value)
+	{
+		$str .= "InfoKey: $key\n";
+		$str .= "InfoValue: $value\n";
+	}
+	foreach ($info2 as $key => $value)
+		$str .= "$key: $value\n";
+	
+	return $str;
+}
